@@ -66,7 +66,7 @@
             transform: scale(0.9);
         }
 
-        /* 🖼️ 【修正】撮影後の写真ポップアップ表示（イメージ通りの上部配置レイアウト） */
+        /* 🖼️ 撮影後の写真ポップアップ表示（上部配置レイアウト） */
         #result-popup {
             display: none;
             position: fixed;
@@ -77,22 +77,20 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* 上詰めに変更 */
-            padding-top: 40px;           /* 画面上部からの適切な余白 */
+            justify-content: flex-start;
+            padding-top: 40px;
             box-sizing: border-box;
         }
         
-        /* 撮影された写真の表示サイズ・位置調整 */
         #result-img {
-            width: 85%;                  /* 左右に適度な余白を持たせる */
-            max-height: 55vh;            /* 画面の縦55%以内に収めて、下部にボタンのスペースを確保 */
+            width: 85%;
+            max-height: 55vh;
             object-fit: contain;
             box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            border-radius: 12px;         /* 角を少し丸くして綺麗に */
-            margin-bottom: 25px;         /* 画像の下側の余白 */
+            border-radius: 12px;
+            margin-bottom: 25px;
         }
 
-        /* 案内テキストの調整 */
         .popup-text {
             color: white;
             font-size: 14px;
@@ -103,21 +101,47 @@
             letter-spacing: 0.5px;
         }
 
-        /* もう一度撮るボタン（エスパルスオレンジの幅広ボタン仕様） */
-        #close-btn {
-            background: #ff7f00;
-            color: white;
+        /* 【修正】ボタンを横並びにするためのコンテナ */
+        .popup-btn-container {
+            display: block;
+            text-align: center;
+            width: 85%;
+        }
+
+        /* 共通ボタンベーススタイル */
+        .popup-btn {
             border: none;
-            padding: 12px 60px;          /* 横幅を少し広げて押しやすく */
-            font-size: 15px;
+            padding: 12px 0;
+            font-size: 14px;
             border-radius: 25px;
             cursor: pointer;
             font-weight: bold;
+            width: 46%;          /* 2個のボタンが綺麗に並ぶ幅 */
+            margin: 0 2%;        /* ボタン間の絶妙な隙間 */
+            display: inline-block;
+            box-sizing: border-box;
+            vertical-align: middle;
+        }
+
+        /* もう一度撮るボタン */
+        #close-btn {
+            background: #ff7f00;
+            color: white;
             box-shadow: 0 4px 10px rgba(255, 127, 0, 0.3);
-            transition: background 0.2s;
         }
         #close-btn:active {
             background: #e06f00;
+        }
+
+        /* 【新設】画像を保存するボタン（白ベースにオレンジ枠で区別化） */
+        #save-btn {
+            background: #ffffff;
+            color: #ff7f00;
+            border: 2px solid #ff7f00;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        #save-btn:active {
+            background: #f0f0f0;
         }
     </style>
 </head>
@@ -132,8 +156,12 @@
 
     <div id="result-popup" style="display: none;">
         <img id="result-img" src="" alt="撮影された写真">
-        <p class="popup-text">画像を長押しして<br>「"写真"に追加」や「画像を保存」を<br>選んで保存してください！</p>
-        <button id="close-btn" onclick="閉じるポップアップ()">もう一度撮る</button>
+        <p class="popup-text">ボタンから保存するか、<br>画像を長押しして「画像を保存」を<br>選んで保存してください！</p>
+        
+        <div class="popup-btn-container">
+            <button id="close-btn" class="popup-btn" onclick="閉じるポップアップ()">もう一度撮る</button>
+            <button id="save-btn" class="popup-btn">画像を保存</button>
+        </div>
     </div>
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false" gl-attributes="preserveDrawingBuffer: true">
@@ -145,6 +173,7 @@
         const カメラ切り替えボタン = document.getElementById('switch-camera-btn');
         const ポップアップ = document.getElementById('result-popup');
         const 結果画像 = document.getElementById('result-img');
+        const 保存ボタン = document.getElementById('save-btn');
         
         let 現在のカメラモード = 'environment'; // 初期状態は外カメラ（背面カメラ）
 
@@ -199,6 +228,22 @@
                 alert('写真の撮影に失敗しました。HTTPSサーバー上で実行してください。');
                 console.error(エラー);
             }
+        });
+
+        // 💾 「画像を保存」ボタンを押した時の処理
+        保存ボタン.addEventListener('click', () => {
+            if (!結果画像.src || 結果画像.src.startsWith('data:,')) {
+                alert('保存する画像がありません。');
+                return;
+            }
+            
+            // 擬似的なダウンロードリンクを作成してクリックを発火させる
+            const リンク = document.createElement('a');
+            リンク.href = 結果画像.src;
+            リンク.download = `spulse-ar-photo_${Date.now()}.png`; // ファイル名にタイムスタンプを付与
+            document.body.appendChild(リンク);
+            リンク.click();
+            document.body.removeChild(リンク);
         });
 
         // 🔄 カメラ切り替えボタンを押した時の処理
