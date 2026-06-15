@@ -118,7 +118,7 @@
         <button id="close-btn" onclick="閉じるポップアップ()">もう一度撮る</button>
     </div>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false" gl-attributes="preserveDrawingBuffer: true">
         <a-entity camera></a-entity>
     </a-scene>
 
@@ -132,56 +132,58 @@
 
         // 📸 シャッターボタンを押した時の処理
         シャッターボタン.addEventListener('click', () => {
+            // AR.jsが生成するビデオ要素、またはA-FrameのCanvasを取得
             const ビデオ要素 = document.querySelector('video');
             const フレーム画像 = document.getElementById('ar-frame');
 
             if (!ビデオ要素) {
-                alert('カメラ映像（video要素）が見つかりません。カメラの許可を確認してください。');
+                alert('カメラの準備ができていないか、許可されていません。');
                 return;
             }
 
             const キャンバス = document.createElement('canvas');
             const コンテキスト = キャンバス.getContext('2d');
 
-            // ビデオの実際の解像度をセット
-            キャンバス.width = ビデオ要素.videoWidth || ビデオ要素.clientWidth;
-            キャンバス.height = ビデオ要素.videoHeight || ビデオ要素.clientHeight;
+            // ビデオの実際の解像度をベースにキャンバスのサイズを決定
+            const 幅 = ビデオ要素.videoWidth || ビデオ要素.clientWidth || 1280;
+            const 高 = ビデオ要素.videoHeight || ビデオ要素.clientHeight || 720;
+            キャンバス.width = 幅;
+            キャンバス.height = 高;
 
-            // 自撮り（内カメラ）の時は、直感的に左右反転（鏡像）させて描画する
+            // 1. 背景としてカメラ映像をキャプチャして描画（内カメラ時は反転）
+            コンテキスト.save();
             if (現在のカメラモード === 'user') {
                 コンテキスト.translate(キャンバス.width, 0);
                 コンテキスト.scale(-1, 1);
             }
-
-            // 1. まず背景にカメラ映像を描画
-            コンテキスト.drawImage(ビデオ要素, 0, 0, キャンバス.width, キャンバス.height);
-
-            // 反転状態を元に戻してフレームを描画（フレームは反転させない）
-            if (現在のカメラモード === 'user') {
-                コンテキスト.setTransform(1, 0, 0, 1, 0, 0);
-            }
-
-            // 2. 【写真合成】横幅を100%基準にし、上下をはみ出させてカットする計算
-            const 描画幅 = キャンバス.width;
             
-            // 【バグ修正】frameImg.naturalWidth になっていた箇所を フレーム画像.naturalWidth に修正
+            // ビデオストリームから現在のフレームを確実にCanvasへコピー
+            コンテキスト.drawImage(ビデオ要素, 0, 0, キャンバス.width, キャンバス.height);
+            コンテキスト.restore();
+
+            // 2. フレーム画像を上に合成（元の比率を維持したまま、上下をはみ出させて中央に配置）
             const フレーム元の幅 = フレーム画像.naturalWidth || フレーム画像.width || 1;
             const フレーム元の高 = フレーム画像.naturalHeight || フレーム画像.height || 1;
+            
+            const 描画幅 = キャンバス.width;
             const 描画高 = キャンバス.width * (フレーム元の高 / フレーム元の幅);
             
             const オフセットX = 0;
             const オフセットY = (キャンバス.height - 描画高) / 2;
 
-            // 計算したサイズでフレームを上に重ねて描画
+            // フレーム画像を描画
             コンテキスト.drawImage(フレーム画像, オフセットX, オフセットY, 描画幅, 描画高);
 
             try {
-                // キャンバスから画像URLに変換してポップアップにセット
-                結果画像.src = キャンバス.toDataURL('image/png');
+                // 生成した画像データをポップアップのimg要素に反映
+                const 画像データurl = キャンバス.toDataURL('image/png');
+                if (!画像データurl || 画像データurl === "data:,") {
+                    throw new Error("画像の生成に失敗しました（データが空です）。");
+                }
+                結果画像.src = 画像データurl;
                 ポップアップ.style.display = 'flex';
             } catch (エラー) {
-                // CORS（セキュリティ制限）エラーなどの確認用
-                alert('写真の生成に失敗しました。\n理由: ' + エラー.message + '\n\nローカル環境（file://）ではなく、HTTPSサーバー上で実行してください。');
+                alert('写真の撮影に失敗しました。\nブラウザのセキュリティ制限（CORS）か、ローカルファイル（file://）で開いている可能性があります。\nHTTPSサーバー上で実行してください。');
                 console.error(エラー);
             }
         });
@@ -191,16 +193,13 @@
             const シーン = document.querySelector('a-scene');
             if (!シーン || !シーン.systems.arjs) return;
 
-            // カメラモードを反転（外カメラ ↔ 内カメラ）
             現在のカメラモード = (現在のカメラモード === 'environment') ? 'user' : 'environment';
 
-            // 既存のWebcamストリームを取得して停止する
             const ビデオ要素 = document.querySelector('video');
             if (ビデオ要素 && ビデオ要素.srcObject) {
                 ビデオ要素.srcObject.getTracks().forEach(トラック => トラック.stop());
             }
 
-            // 新しい設定でカメラを再リクエストする
             navigator.mediaDevices.getUserMedia({
                 audio: false,
                 video: {
@@ -213,7 +212,6 @@
                     ビデオ要素.srcObject = ストリーム;
                     ビデオ要素.play();
                     
-                    // 内カメラの時は画面上のプレビュー映像も鏡（ミラー）表示にする
                     if (現在のカメラモード === 'user') {
                         ビデオ要素.style.transform = 'scaleX(-1)';
                     } else {
