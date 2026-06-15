@@ -66,40 +66,58 @@
             transform: scale(0.9);
         }
 
-        /* 🖼️ 撮影後の写真ポップアップ表示（長押し保存用） */
+        /* 🖼️ 【修正】撮影後の写真ポップアップ表示（イメージ通りの上部配置レイアウト） */
         #result-popup {
             display: none;
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0, 0, 0, 0.95);
             z-index: 30;
-            justify-content: center;
-            align-items: center;
+            display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* 上詰めに変更 */
+            padding-top: 40px;           /* 画面上部からの適切な余白 */
+            box-sizing: border-box;
         }
+        
+        /* 撮影された写真の表示サイズ・位置調整 */
         #result-img {
-            max-width: 90%;
-            max-height: 70%;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            border-radius: 8px;
+            width: 85%;                  /* 左右に適度な余白を持たせる */
+            max-height: 55vh;            /* 画面の縦55%以内に収めて、下部にボタンのスペースを確保 */
+            object-fit: contain;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            border-radius: 12px;         /* 角を少し丸くして綺麗に */
+            margin-bottom: 25px;         /* 画像の下側の余白 */
         }
+
+        /* 案内テキストの調整 */
         .popup-text {
             color: white;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
-            margin: 15px 0;
+            line-height: 1.6;
+            margin: 0 20px 25px 20px;
             text-align: center;
+            letter-spacing: 0.5px;
         }
+
+        /* もう一度撮るボタン（エスパルスオレンジの幅広ボタン仕様） */
         #close-btn {
             background: #ff7f00;
             color: white;
             border: none;
-            padding: 10px 25px;
-            font-size: 14px;
-            border-radius: 20px;
+            padding: 12px 60px;          /* 横幅を少し広げて押しやすく */
+            font-size: 15px;
+            border-radius: 25px;
             cursor: pointer;
             font-weight: bold;
+            box-shadow: 0 4px 10px rgba(255, 127, 0, 0.3);
+            transition: background 0.2s;
+        }
+        #close-btn:active {
+            background: #e06f00;
         }
     </style>
 </head>
@@ -112,9 +130,9 @@
     <button id="shutter-btn"></button>
     <button id="switch-camera-btn">🔄</button>
 
-    <div id="result-popup">
-        <p class="popup-text">画像を長押しして<br>「"写真"に追加」や「画像を保存」を<br>選んで保存してください！</p>
+    <div id="result-popup" style="display: none;">
         <img id="result-img" src="" alt="撮影された写真">
+        <p class="popup-text">画像を長押しして<br>「"写真"に追加」や「画像を保存」を<br>選んで保存してください！</p>
         <button id="close-btn" onclick="閉じるポップアップ()">もう一度撮る</button>
     </div>
 
@@ -132,7 +150,6 @@
 
         // 📸 シャッターボタンを押した時の処理
         シャッターボタン.addEventListener('click', () => {
-            // AR.jsが生成するビデオ要素、またはA-FrameのCanvasを取得
             const ビデオ要素 = document.querySelector('video');
             const フレーム画像 = document.getElementById('ar-frame');
 
@@ -144,7 +161,6 @@
             const キャンバス = document.createElement('canvas');
             const コンテキスト = キャンバス.getContext('2d');
 
-            // ビデオの実際の解像度をベースにキャンバスのサイズを決定
             const 幅 = ビデオ要素.videoWidth || ビデオ要素.clientWidth || 1280;
             const 高 = ビデオ要素.videoHeight || ビデオ要素.clientHeight || 720;
             キャンバス.width = 幅;
@@ -157,7 +173,6 @@
                 コンテキスト.scale(-1, 1);
             }
             
-            // ビデオストリームから現在のフレームを確実にCanvasへコピー
             コンテキスト.drawImage(ビデオ要素, 0, 0, キャンバス.width, キャンバス.height);
             コンテキスト.restore();
 
@@ -171,19 +186,17 @@
             const オフセットX = 0;
             const オフセットY = (キャンバス.height - 描画高) / 2;
 
-            // フレーム画像を描画
             コンテキスト.drawImage(フレーム画像, オフセットX, オフセットY, 描画幅, 描画高);
 
             try {
-                // 生成した画像データをポップアップのimg要素に反映
                 const 画像データurl = キャンバス.toDataURL('image/png');
                 if (!画像データurl || 画像データurl === "data:,") {
-                    throw new Error("画像の生成に失敗しました（データが空です）。");
+                    throw new Error("画像の生成に失敗しました。");
                 }
                 結果画像.src = 画像データurl;
                 ポップアップ.style.display = 'flex';
             } catch (エラー) {
-                alert('写真の撮影に失敗しました。\nブラウザのセキュリティ制限（CORS）か、ローカルファイル（file://）で開いている可能性があります。\nHTTPSサーバー上で実行してください。');
+                alert('写真の撮影に失敗しました。HTTPSサーバー上で実行してください。');
                 console.error(エラー);
             }
         });
