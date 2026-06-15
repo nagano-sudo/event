@@ -101,7 +101,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* 【修正】ボタンを横並びにするためのコンテナ */
+        /* ボタンを横並びにするためのコンテナ */
         .popup-btn-container {
             display: block;
             text-align: center;
@@ -116,8 +116,8 @@
             border-radius: 25px;
             cursor: pointer;
             font-weight: bold;
-            width: 46%;          /* 2個のボタンが綺麗に並ぶ幅 */
-            margin: 0 2%;        /* ボタン間の絶妙な隙間 */
+            width: 46%;          
+            margin: 0 2%;        
             display: inline-block;
             box-sizing: border-box;
             vertical-align: middle;
@@ -133,7 +133,7 @@
             background: #e06f00;
         }
 
-        /* 【新設】画像を保存するボタン（白ベースにオレンジ枠で区別化） */
+        /* 画像を保存ボタン */
         #save-btn {
             background: #ffffff;
             color: #ff7f00;
@@ -156,7 +156,7 @@
 
     <div id="result-popup" style="display: none;">
         <img id="result-img" src="" alt="撮影された写真">
-        <p class="popup-text">ボタンから保存するか、<br>画像を長押しして「画像を保存」を<br>選んで保存してください！</p>
+        <p class="popup-text">「画像を保存」から共有画面を開き、<br>「画像を保存」を選ぶと写真フォルダに入ります。<br>(または画像を長押しでも保存できます)</p>
         
         <div class="popup-btn-container">
             <button id="close-btn" class="popup-btn" onclick="閉じるポップアップ()">もう一度撮る</button>
@@ -175,7 +175,8 @@
         const 結果画像 = document.getElementById('result-img');
         const 保存ボタン = document.getElementById('save-btn');
         
-        let 現在のカメラモード = 'environment'; // 初期状態は外カメラ（背面カメラ）
+        let 現在のカメラモード = 'environment'; 
+        let 撮影された画像Blob = null; // 共有用にバイナリデータを保持する変数
 
         // 📸 シャッターボタンを押した時の処理
         シャッターボタン.addEventListener('click', () => {
@@ -195,34 +196,34 @@
             キャンバス.width = 幅;
             キャンバス.height = 高;
 
-            // 1. 背景としてカメラ映像をキャプチャして描画（内カメラ時は反転）
+            // 1. 背景としてカメラ映像を描画
             コンテキスト.save();
             if (現在のカメラモード === 'user') {
                 コンテキスト.translate(キャンバス.width, 0);
                 コンテキスト.scale(-1, 1);
             }
-            
             コンテキスト.drawImage(ビデオ要素, 0, 0, キャンバス.width, キャンバス.height);
             コンテキスト.restore();
 
-            // 2. フレーム画像を上に合成（元の比率を維持したまま、上下をはみ出させて中央に配置）
+            // 2. フレーム画像を合成
             const フレーム元の幅 = フレーム画像.naturalWidth || フレーム画像.width || 1;
             const フレーム元の高 = フレーム画像.naturalHeight || フレーム画像.height || 1;
-            
             const 描画幅 = キャンバス.width;
             const 描画高 = キャンバス.width * (フレーム元の高 / フレーム元の幅);
-            
             const オフセットX = 0;
             const オフセットY = (キャンバス.height - 描画高) / 2;
 
             コンテキスト.drawImage(フレーム画像, オフセットX, オフセットY, 描画幅, 描画高);
 
             try {
-                const 画像データurl = キャンバス.toDataURL('image/png');
-                if (!画像データurl || 画像データurl === "data:,") {
-                    throw new Error("画像の生成に失敗しました。");
-                }
-                結果画像.src = 画像データurl;
+                // 画面表示用URLの生成
+                結果画像.src = キャンバス.toDataURL('image/png');
+                
+                // 【新機能】共有メニューに渡すための「ファイルデータ」を同時に生成
+                キャンバス.toBlob((blob) => {
+                    撮影された画像Blob = blob;
+                }, 'image/png');
+
                 ポップアップ.style.display = 'flex';
             } catch (エラー) {
                 alert('写真の撮影に失敗しました。HTTPSサーバー上で実行してください。');
@@ -230,20 +231,40 @@
             }
         });
 
-        // 💾 「画像を保存」ボタンを押した時の処理
-        保存ボタン.addEventListener('click', () => {
-            if (!結果画像.src || 結果画像.src.startsWith('data:,')) {
-                alert('保存する画像がありません。');
+        // 💾 「画像を保存」ボタンを押した時の処理（共有メニューの呼び出し）
+        保存ボタン.addEventListener('click', async () => {
+            if (!撮影された画像Blob) {
+                alert('保存する画像データがまだ準備できていません。しばらく待ってから再度お試しください。');
                 return;
             }
-            
-            // 擬似的なダウンロードリンクを作成してクリックを発火させる
-            const リンク = document.createElement('a');
-            リンク.href = 結果画像.src;
-            リンク.download = `spulse-ar-photo_${Date.now()}.png`; // ファイル名にタイムスタンプを付与
-            document.body.appendChild(リンク);
-            リンク.click();
-            document.body.removeChild(リンク);
+
+            // 擬似的なファイルオブジェクトを作成
+            const ファイル = new File([撮影された画像Blob], `spulse-photo.png`, { type: 'image/png' });
+
+            // スマホが共有機能に対応しているか、かつファイルをサポートしているか確認
+            if (navigator.canShare && navigator.canShare({ files: [ファイル] })) {
+                try {
+                    // スマホ標準の共有メニュー（下からスッと出てくるやつ）を開く
+                    await navigator.share({
+                        files: [ファイル],
+                        title: 'エスパルス ARフォト',
+                        text: 'ARフォトフレームで撮影した写真です！'
+                    });
+                } catch (エラー) {
+                    // ユーザーが途中でキャンセルした場合は何もしない
+                    if (エラー.name !== 'AbortError') {
+                        console.error('共有に失敗しました:', エラー);
+                    }
+                }
+            } else {
+                // 万が一古いスマホ等で共有機能が使えなかった場合は、従来のフォルダダウンロードに切り替える
+                const リンク = document.createElement('a');
+                リンク.href = 結果画像.src;
+                リンク.download = `spulse-ar-photo_${Date.now()}.png`;
+                document.body.appendChild(リンク);
+                リンク.click();
+                document.body.removeChild(リンク);
+            }
         });
 
         // 🔄 カメラ切り替えボタンを押した時の処理
@@ -285,6 +306,7 @@
         // ポップアップを閉じる処理
         function 閉じるポップアップ() {
             ポップアップ.style.display = 'none';
+            撮影された画像Blob = null; // データをクリア
         }
     </script>
 </body>
