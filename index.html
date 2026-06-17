@@ -196,7 +196,7 @@
             <button class="btn" style="background: linear-gradient(45deg, #1F2954, #3a4b91); color: #FFD700; border: 1px solid #FFD700;" onclick="returnToTop()">🏠 タイトルへ戻る</button>
             
             <div class="controls-row" style="margin-top: 5px;">
-                <button class="btn btn-sub" onclick="retakePhoto()">🔄 もう一度撮る</button>
+                <button class="btn btn-sub" onclick="retakePhoto()">🔄 もう一度撮る（撮り直し）</button>
             </div>
         </div>
         
@@ -226,7 +226,8 @@
             orihime: {
                 title: "織姫彦星吉 💞",
                 text: "すてきなハッピー！\nたいせつな人との願い事が叶うかもしれないね。",
-                frame: "https://placehold.jp/30/ff66cc/ffffff/600x800.png?text=💞Orihime_Frame💞" 
+                // 📂 ここに作成していただいた画像を適用しました！
+                frame: "tanabata_photoframe_2.jpg" 
             },
             sasanoha: {
                 title: "笹の葉吉 🎋",
@@ -384,8 +385,10 @@
 
         function retakePhoto() {
             currentBlob = null;
-            document.getElementById('taken-image').classList.add('hidden');
-            document.getElementById('taken-image').src = "";
+            const takenImage = document.getElementById('taken-image');
+            takenImage.classList.add('hidden');
+            takenImage.src = "";
+            
             document.getElementById('before-shoot').classList.remove('hidden');
             document.getElementById('after-shoot').classList.add('hidden');
             document.getElementById('camera-instruction').innerText = "はい、チーズ！";
