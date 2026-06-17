@@ -15,7 +15,7 @@
             width: 100vw;
             height: 100vh;
         }
-        #start-screen, #game-screen, #result-screen, #camera-screen {
+        #start-screen, #game-screen, #confirm-screen, #result-screen, #camera-screen {
             position: absolute;
             width: 100%;
             height: 100%;
@@ -33,61 +33,76 @@
             background: linear-gradient(45deg, #FFD700, #FFA500);
             color: #0B1026;
             border: none;
-            padding: 14px 30px;
+            padding: 14px 35px;
             font-size: 18px;
             font-weight: bold;
             border-radius: 30px;
             margin-top: 15px;
             box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
             cursor: pointer;
+            transition: transform 0.1s;
         }
-        .btn-easy {
-            background: linear-gradient(45deg, #FF69B4, #FF1493);
-            color: #fff;
-            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
-        }
-        .btn-hard {
-            background: linear-gradient(45deg, #4169E1, #00008B);
-            color: #fff;
-            box-shadow: 0 5px 15px rgba(65, 105, 225, 0.4);
-        }
+        .btn:active { transform: scale(0.95); }
         .btn-sub { background: #444; color: #fff; box-shadow: none; font-size: 14px; padding: 8px 20px; }
 
         /* 短冊カードの配置 */
         #card-container {
             display: flex;
             justify-content: center;
-            gap: 15px;
-            margin-top: 30px;
+            gap: 18px;
+            margin-top: 35px;
             width: 100%;
+            height: 220px;
         }
         .tanzaku-card {
-            width: 80px;
-            height: 200px;
+            width: 85px;
+            height: 210px;
             background: #fff;
-            border-radius: 5px;
-            box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+            border-radius: 6px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
             cursor: pointer;
             position: relative;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .tanzaku-card:active { transform: scale(0.95); }
+        .tanzaku-card:hover { transform: translateY(-5px); }
         
-        /* 短冊の色分け */
-        .tanzaku-1 { background: #FFB6C1; border-left: 6px solid #FF69B4; }
-        .tanzaku-2 { background: #E0FFFF; border-left: 6px solid #00CED1; }
-        .tanzaku-3 { background: #98FB98; border-left: 6px solid #32CD32; }
+        /* 短冊の色分け（グラデーションにして綺麗にしました） */
+        .tanzaku-1 { background: linear-gradient(to bottom, #FFF0F5, #FFB6C1); border-left: 6px solid #FF69B4; }
+        .tanzaku-2 { background: linear-gradient(to bottom, #F0FFFF, #E0FFFF); border-left: 6px solid #00CED1; }
+        .tanzaku-3 { background: linear-gradient(to bottom, #F0FFF0, #98FB98); border-left: 6px solid #32CD32; }
         
         .tanzaku-text {
             position: absolute;
-            top: 20px;
+            top: 30px;
             left: 50%;
             transform: translateX(-50%);
             color: #333;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 19px;
             writing-mode: vertical-rl;
-            letter-spacing: 6px;
+            letter-spacing: 8px;
+        }
+
+        /* 🎬 シャッフル時のカタカタアニメーション */
+        .shuffle-anim {
+            animation: shake 0.4s ease-in-out infinite alternate;
+        }
+        @keyframes shake {
+            0% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        /* 🎉 お祝いの星くずエフェクト */
+        .celebrate-star {
+            position: absolute;
+            font-size: 24px;
+            pointer-events: none;
+            animation: fall 1.5s linear forwards;
+            z-index: 99;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
         }
 
         /* 📷 カメラ表示 */
@@ -123,39 +138,46 @@
     <div id="stars-bg"></div>
 
     <div id="start-screen">
-        <h1 style="color: #FFD700; margin-bottom: 5px; font-size: 28px;">七夕！天の川みくじ</h1>
-        <p style="font-size: 14px; margin-bottom: 30px; color: #add8e6;">短冊をえらんで、限定フォトフレームをもらおう！</p>
-        
-        <div style="display: flex; flex-direction: column; gap: 15px; width: 80%; max-width: 280px;">
-            <button class="btn btn-easy" onclick="selectDifficulty('easy')">👦 初級をひく<br><span style="font-size:11px; font-weight:normal;">大当たりの確率が高いよ！</span></button>
-            <button class="btn btn-hard" onclick="selectDifficulty('hard')">🔥 上級をひく<br><span style="font-size:11px; font-weight:normal;">どきどきリアル運試し！</span></button>
-        </div>
+        <h1 style="color: #FFD700; margin-bottom: 5px; font-size: 30px; text-shadow: 0 0 15px rgba(255,215,0,0.5);">七夕！天の川みくじ</h1>
+        <p style="font-size: 14px; margin-bottom: 40px; color: #add8e6;">運を天にまかせて、限定フォトフレームをゲットしよう！</p>
+        <button class="btn" style="padding: 16px 45px; font-size: 20px;" onclick="goToGame()">みくじを引く</button>
     </div>
 
     <div id="game-screen" class="hidden">
-        <h2 style="color: #FFD700; font-size: 22px;">好きな短冊を1枚選んでね</h2>
-        <p style="font-size: 13px; margin-top: 5px; color: #ccc;">どれをえらんでもカメラが起動するよ</p>
+        <h2 id="game-instruction" style="color: #FFD700; font-size: 22px;">好きな短冊を1枚選んでね</h2>
+        <p id="game-subtext" style="font-size: 13px; margin-top: 5px; color: #ccc;">どれをえらんでもカメラが起動するよ</p>
         
         <div id="card-container">
-            <div class="tanzaku-card tanzaku-1" onclick="drawOmikuji()">
-                <div class="tanzaku-text">ねがいごと</div>
+            <div id="card1" class="tanzaku-card tanzaku-1" onclick="selectCard(1)">
+                <div class="tanzaku-text">願い事</div>
             </div>
-            <div class="tanzaku-card tanzaku-2" onclick="drawOmikuji()">
-                <div class="tanzaku-text">天の川</div>
+            <div id="card2" class="tanzaku-card tanzaku-2" onclick="selectCard(2)">
+                <div class="tanzaku-text">願い事</div>
             </div>
-            <div class="tanzaku-card tanzaku-3" onclick="drawOmikuji()">
-                <div class="tanzaku-text">なつまつり</div>
+            <div id="card3" class="tanzaku-card tanzaku-3" onclick="selectCard(3)">
+                <div class="tanzaku-text">願い事</div>
             </div>
         </div>
+    </div>
+
+    <div id="confirm-screen" class="hidden">
+        <h2 style="color: #FFD700; font-size: 24px; margin-bottom: 15px;">魂を込めて……</h2>
+        <p style="font-size: 15px; margin-bottom: 30px;">選んだ短冊から、天の川のパワーを感じるぞ！</p>
+        
+        <div id="selected-card-preview" class="tanzaku-card" style="pointer-events: none; margin-bottom: 25px;">
+            <div class="tanzaku-text">願い事</div>
+        </div>
+
+        <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color:#fff;" onclick="drawOmikuji()">🔮 結果をみる！</button>
     </div>
 
     <div id="result-screen" class="hidden">
         <p style="font-size: 16px; color: #add8e6; margin-bottom: 5px;">あなたの運勢は…</p>
-        <h2 id="result-title" style="font-size: 40px; margin-bottom: 15px; text-shadow: 0 0 10px #FFD700;"></h2>
-        <p id="result-text" style="font-size: 16px; margin-bottom: 30px; white-space: pre-line; line-height: 1.6;"></p>
+        <h2 id="result-title" style="font-size: 42px; margin-bottom: 15px; text-shadow: 0 0 15px #FFD700;"></h2>
+        <p id="result-text" style="font-size: 16px; margin-bottom: 35px; white-space: pre-line; line-height: 1.6;"></p>
         
         <button class="btn" onclick="openCamera()">このフレームでカメラを起動</button>
-        <button class="btn btn-sub" onclick="resetGame()" style="margin-top: 20px;">タイトルへ戻る</button>
+        <button class="btn btn-sub" onclick="resetGame()" style="margin-top: 25px;">タイトルへ戻る</button>
     </div>
 
     <div id="camera-screen" class="hidden">
@@ -194,64 +216,90 @@
         }
 
         // --- ⚙️ おみくじとフォトフレームの設定 ---
-        let currentMode = 'easy';
-        let selectedFrame = ""; // 当たったフレームのURLを保存する変数
+        let selectedFrame = ""; 
 
-        // 🌟 3パターンの結果と、それぞれのフォトフレーム画像のURLを設定してください
         const omikujiResults = {
             amanogawa: {
                 title: "天の川吉 ✨",
                 text: "最高のラッキー！\n満天の星空があなたに幸運を届けてくれるよ。",
-                frame: "https://example.com/frame-amanogawa.png" // 天の川フレームのURL
+                frame: "https://example.com/frame-amanogawa.png" 
             },
             orihime: {
                 title: "織姫彦星吉 💞",
                 text: "すてきなハッピー！\nたいせつな人との願い事が叶うかもしれないね。",
-                frame: "https://example.com/frame-orihime.png" // 織姫彦星フレームのURL
+                frame: "https://example.com/frame-orihime.png" 
             },
             sasanoha: {
                 title: "笹の葉吉 🎋",
                 text: "まったりラッキー！\n短冊に書いた願い事が、風にのって天まで届くよ。",
-                frame: "https://example.com/frame-sasanoha.png" // 笹の葉フレームのURL
+                frame: "https://example.com/frame-sasanoha.png" 
             }
         };
 
-        function selectDifficulty(mode) {
-            currentMode = mode;
+        // スタートからゲーム画面に移る際、シャッフル演出を挟む
+        function goToGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
+            
+            // カタカタ揺れるアニメーションを付与
+            const cards = [document.getElementById('card1'), document.getElementById('card2'), document.getElementById('card3')];
+            cards.forEach(c => c.classList.add('shuffle-anim'));
+            document.getElementById('game-instruction').innerText = "天の川が短冊をシャッフル中...";
+            
+            // 1.2秒後にシャッフルが止まり、選べるようになる
+            setTimeout(() => {
+                cards.forEach(c => c.classList.remove('shuffle-anim'));
+                document.getElementById('game-instruction').innerText = "好きな短冊を1枚選んでね";
+            }, 1200);
         }
 
-        // 短冊をタップした時の処理（フリーズ要素は一切ありません）
-        function drawOmikuji() {
+        // 短冊を選んだ時の処理（確認画面へ）
+        function selectCard(cardNumber) {
             document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('confirm-screen').classList.remove('hidden');
+            
+            // 確認画面のダミー短冊の色を、選んだものに合わせる
+            const preview = document.getElementById('selected-card-preview');
+            preview.className = "tanzaku-card tanzaku-" + cardNumber;
+        }
+
+        // おみくじを確定で引く処理（各33.3%の完全均等）
+        function drawOmikuji() {
+            document.getElementById('confirm-screen').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
 
             let resultKey = "sasanoha";
             const rand = Math.random();
 
-            // 初級と上級で、当選確率の比率を変える処理
-            if (currentMode === 'easy') {
-                // 初級：天の川吉 60% / 織姫彦星吉 30% / 笹の葉吉 10%
-                if (rand < 0.6) resultKey = "amanogawa";
-                else if (rand < 0.9) resultKey = "orihime";
-                else resultKey = "sasanoha";
-            } else {
-                // 上級：均等（各33.3%）
-                if (rand < 0.33) resultKey = "amanogawa";
-                else if (rand < 0.66) resultKey = "orihime";
-                else resultKey = "sasanoha";
-            }
+            if (rand < 0.333) resultKey = "amanogawa";
+            else if (rand < 0.666) resultKey = "orihime";
+            else resultKey = "sasanoha";
 
             const result = omikujiResults[resultKey];
             
-            // 結果を画面に表示
             document.getElementById('result-title').innerText = result.title;
             document.getElementById('result-text').innerText = result.text;
             
-            // 重要：当たった種類に応じたフォトフレーム画像URLをセット
             selectedFrame = result.frame;
             document.getElementById('frame-overlay').src = selectedFrame;
+
+            // 「天の川吉」の時だけ星屑を降らせるエフェクト
+            if (resultKey === 'amanogawa') {
+                for (let i = 0; i < 25; i++) {
+                    setTimeout(spawnCelebrateStar, i * 40);
+                }
+            }
+        }
+
+        // 星くずエフェクト生成
+        function spawnCelebrateStar() {
+            const star = document.createElement('div');
+            star.className = 'celebrate-star';
+            star.innerText = ['✨','⭐','🌟'][Math.floor(Math.random() * 3)];
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.fontSize = (Math.random() * 20 + 20) + 'px';
+            document.body.appendChild(star);
+            setTimeout(() => star.remove(), 1500);
         }
 
         function resetGame() {
@@ -259,7 +307,7 @@
             document.getElementById('start-screen').classList.remove('hidden');
         }
 
-        // --- 📷 カメラ機能（前回の安定版を踏襲） ---
+        // --- 📷 カメラ機能 ---
         let currentStream = null;
         let useFacingMode = "user"; 
 
