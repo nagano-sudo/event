@@ -64,10 +64,8 @@
             position: relative;
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        /* タップした時に少し沈む演出 */
         .tanzaku-card:active { transform: scale(0.95); }
         
-        /* 短冊のグラデーション色分け */
         .tanzaku-1 { background: linear-gradient(to bottom, #FFF0F5, #FFB6C1); border-left: 6px solid #FF69B4; }
         .tanzaku-2 { background: linear-gradient(to bottom, #F0FFFF, #E0FFFF); border-left: 6px solid #00CED1; }
         .tanzaku-3 { background: linear-gradient(to bottom, #F0FFF0, #98FB98); border-left: 6px solid #32CD32; }
@@ -84,7 +82,7 @@
             letter-spacing: 8px;
         }
 
-        /* 🎉 お祝いの星くずエフェクト */
+        /* 🎉 星くず */
         .celebrate-star {
             position: absolute;
             font-size: 24px;
@@ -97,7 +95,7 @@
             100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
         }
 
-        /* 📷 カメラ表示 */
+        /* 📷 カメラ表示エリア */
         #camera-container {
             position: relative;
             width: 100%;
@@ -119,7 +117,10 @@
         }
         #preview-canvas { display: none; }
         #taken-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 4; }
-        .camera-controls { display: flex; gap: 10px; margin-top: 15px; }
+        
+        /* 縦並びにしてボタンを押しやすく整えるための設定 */
+        .camera-controls { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 15px; width: 100%; }
+        .controls-row { display: flex; gap: 10px; justify-content: center; width: 100%; }
 
         .bg-star { position: absolute; background: white; border-radius: 50%; animation: blink 2s infinite alternate; }
         @keyframes blink { from { opacity: 0.2; } to { opacity: 1; } }
@@ -182,18 +183,22 @@
         </div>
 
         <div id="before-shoot" class="camera-controls">
-            <button class="btn btn-sub" onclick="switchCamera()">🔄 カメラ切替</button>
-            <button class="btn" onclick="takePhoto()">📸 パシャリ！</button>
+            <div class="controls-row">
+                <button class="btn btn-sub" onclick="switchCamera()">🔄 カメラ切替</button>
+                <button class="btn" onclick="takePhoto()">📸 パシャリ！</button>
+            </div>
+            <button class="btn btn-sub" onclick="closeCamera()" style="margin-top: 15px;">戻る</button>
         </div>
 
         <div id="after-shoot" class="camera-controls hidden">
-            <button class="btn btn-sub" onclick="retakePhoto()">🔄 撮り直し</button>
-            <a id="download-link" download="tanabata_photo.png">
-                <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color: #fff;">💾 保存する</button>
-            </a>
+            <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color: #fff; width: 80%; max-width: 300px;" onclick="sharePhoto()">📤 写真を保存・共有</button>
+            
+            <div class="controls-row" style="margin-top: 10px;">
+                <button class="btn btn-sub" onclick="retakePhoto()">🔄 撮り直し</button>
+                <button class="btn btn-sub" style="background: #1F2954; color: #FFD700; font-weight: bold; border: 1px solid #FFD700;" onclick="returnToTop()">🏠 トップに戻る</button>
+            </div>
         </div>
         
-        <button class="btn btn-sub" onclick="closeCamera()" style="margin-top: 25px;">戻る</button>
         <canvas id="preview-canvas"></canvas>
     </div>
 
@@ -209,6 +214,7 @@
 
         // --- ⚙️ おみくじとフォトフレームの設定 ---
         let selectedFrame = ""; 
+        let currentBlob = null; 
 
         const omikujiResults = {
             amanogawa: {
@@ -228,13 +234,11 @@
             }
         };
 
-        // シンプルに次の画面へ移動（エラーの原因になるシャッフルを全廃止）
         function goToGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
         }
 
-        // 短冊をタップしたとき（いつでも確実に動きます）
         function selectCard(cardNumber) {
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('confirm-screen').classList.remove('hidden');
@@ -336,21 +340,49 @@
 
             try {
                 ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+                
                 const dataUrl = canvas.toDataURL('image/png');
                 takenImage.src = dataUrl;
                 takenImage.classList.remove('hidden');
 
-                document.getElementById('download-link').href = dataUrl;
+                canvas.toBlob((blob) => {
+                    currentBlob = blob;
+                }, 'image/png');
+
                 document.getElementById('before-shoot').classList.add('hidden');
                 document.getElementById('after-shoot').classList.remove('hidden');
                 document.getElementById('camera-instruction').innerText = "きれいに撮れたかな？";
             } catch(e) {
                 console.error("画像合成エラー:", e);
-                alert("画像の合成に失敗しました。本番用フレーム画像を設定すると解決する場合があります。");
+                alert("画像の合成に失敗しました。");
+            }
+        }
+
+        async function sharePhoto() {
+            if (!currentBlob) {
+                alert("写真の準備ができていません。もう一度撮影してください。");
+                return;
+            }
+
+            const file = new File([currentBlob], "tanabata_photo.png", { type: "image/png" });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: '七夕！天の川みくじフォト',
+                        text: 'おみくじカメラで撮影したよ！'
+                    });
+                } catch (err) {
+                    console.log("共有がキャンセルまたは失敗しました:", err);
+                }
+            } else {
+                alert("お使いのブラウザは直接の共有メニューに対応していません。画像を長押しするかスクリーンショットで保存してください。");
             }
         }
 
         function retakePhoto() {
+            currentBlob = null;
             document.getElementById('taken-image').classList.add('hidden');
             document.getElementById('taken-image').src = "";
             document.getElementById('before-shoot').classList.remove('hidden');
@@ -362,6 +394,17 @@
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
             document.getElementById('camera-screen').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
+        }
+
+        // 🏠 撮影完了後に安全にカメラを止めて最初（スタート画面）に戻る関数
+        function returnToTop() {
+            if (currentStream) { 
+                currentStream.getTracks().forEach(track => track.stop()); 
+                currentStream = null; 
+            }
+            // 各画面の初期化
+            document.getElementById('camera-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
         }
     </script>
 </body>
