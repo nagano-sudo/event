@@ -53,7 +53,6 @@
             margin-top: 35px;
             width: 100%;
             height: 240px;
-            position: relative;
         }
         .tanzaku-card {
             width: 85px;
@@ -64,8 +63,9 @@
             cursor: pointer;
             position: relative;
             transition: transform 0.2s, box-shadow 0.2s;
-            will-change: transform;
         }
+        /* タップした時に少し沈む演出 */
+        .tanzaku-card:active { transform: scale(0.95); }
         
         /* 短冊のグラデーション色分け */
         .tanzaku-1 { background: linear-gradient(to bottom, #FFF0F5, #FFB6C1); border-left: 6px solid #FF69B4; }
@@ -82,25 +82,6 @@
             font-size: 19px;
             writing-mode: vertical-rl;
             letter-spacing: 8px;
-        }
-
-        /* 🌪️ ダイナミック・シャッフルアニメーション */
-        .shuffle-left { animation: moveLeft 0.4s ease-in-out 4 alternate; }
-        .shuffle-right { animation: moveRight 0.4s ease-in-out 4 alternate; }
-        .shuffle-center { animation: moveCenter 0.2s ease-in-out 8 alternate; }
-
-        @keyframes moveLeft {
-            0% { transform: translateX(0) scale(1); z-index: 1; }
-            100% { transform: translateX(105px) scale(1.1); z-index: 10; }
-        }
-        @keyframes moveRight {
-            0% { transform: translateX(0) scale(1); z-index: 1; }
-            100% { transform: translateX(-105px) scale(0.9); z-index: -1; }
-        }
-        @keyframes moveCenter {
-            0% { transform: scale(1) rotate(0deg); }
-            50% { transform: scale(1.1) rotate(5deg); }
-            100% { transform: scale(0.9) rotate(-5deg); }
         }
 
         /* 🎉 お祝いの星くずエフェクト */
@@ -148,32 +129,29 @@
 
     <div id="stars-bg"></div>
 
-    <!-- 1. スタート画面 -->
     <div id="start-screen">
         <h1 style="color: #FFD700; margin-bottom: 5px; font-size: 30px; text-shadow: 0 0 15px rgba(255,215,0,0.5);">七夕！天の川みくじ</h1>
         <p style="font-size: 14px; margin-bottom: 40px; color: #add8e6;">運を天にまかせて、限定フォトフレームをゲットしよう！</p>
         <button class="btn" style="padding: 16px 45px; font-size: 20px;" onclick="goToGame()">みくじを引く</button>
     </div>
 
-    <!-- 2. ゲーム画面 -->
     <div id="game-screen" class="hidden">
-        <h2 id="game-instruction" style="color: #FFD700; font-size: 22px;">好きな短冊を1枚選んでね</h2>
-        <p id="game-subtext" style="font-size: 13px; margin-top: 5px; color: #ccc;">どれをえらんでもカメラが起動するよ</p>
+        <h2 style="color: #FFD700; font-size: 22px;">この3つから選んでね</h2>
+        <p style="font-size: 13px; margin-top: 5px; color: #ccc;">どれをえらんでもカメラが起動するよ</p>
         
         <div id="card-container">
-            <div id="card1" class="tanzaku-card tanzaku-1" onclick="selectCard(1)">
+            <div class="tanzaku-card tanzaku-1" onclick="selectCard(1)">
                 <div class="tanzaku-text">願い事</div>
             </div>
-            <div id="card2" class="tanzaku-card tanzaku-2" onclick="selectCard(2)">
+            <div class="tanzaku-card tanzaku-2" onclick="selectCard(2)">
                 <div class="tanzaku-text">願い事</div>
             </div>
-            <div id="card3" class="tanzaku-card tanzaku-3" onclick="selectCard(3)">
+            <div class="tanzaku-card tanzaku-3" onclick="selectCard(3)">
                 <div class="tanzaku-text">願い事</div>
             </div>
         </div>
     </div>
 
-    <!-- 3. ドキドキ確認画面 -->
     <div id="confirm-screen" class="hidden">
         <h2 style="color: #FFD700; font-size: 24px; margin-bottom: 15px;">魂を込めて……</h2>
         <p style="font-size: 15px; margin-bottom: 30px;">選んだ短冊から、天の川のパワーを感じるぞ！</p>
@@ -185,7 +163,6 @@
         <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color:#fff;" onclick="drawOmikuji()">🔮 結果をみる！</button>
     </div>
 
-    <!-- 4. 結果画面 -->
     <div id="result-screen" class="hidden">
         <p style="font-size: 16px; color: #add8e6; margin-bottom: 5px;">あなたの運勢は…</p>
         <h2 id="result-title" style="font-size: 42px; margin-bottom: 15px; text-shadow: 0 0 15px #FFD700;"></h2>
@@ -195,7 +172,6 @@
         <button class="btn btn-sub" onclick="resetGame()" style="margin-top: 25px;">タイトルへ戻る</button>
     </div>
 
-    <!-- 5. 📷 カメラ・撮影画面 -->
     <div id="camera-screen" class="hidden">
         <h2 style="color: #FFD700; font-size: 18px; margin-bottom: 10px;" id="camera-instruction">はい、チーズ！</h2>
         
@@ -233,12 +209,11 @@
 
         // --- ⚙️ おみくじとフォトフレームの設定 ---
         let selectedFrame = ""; 
-        let isShuffling = false; // シャッフル中の誤タップを防ぐフラグ
 
         const omikujiResults = {
             amanogawa: {
                 title: "天の川吉 ✨",
-                text: "最高のラッキー！\n満天 of 星空があなたに幸運を届けてくれるよ。",
+                text: "最高のラッキー！\n満天の星空があなたに幸運を届けてくれるよ。",
                 frame: "https://placehold.jp/30/ffcc00/ffffff/600x800.png?text=✨Amanogawa_Frame✨" 
             },
             orihime: {
@@ -253,38 +228,14 @@
             }
         };
 
-        // 🌟 確実に入れ替わり、タップも100%効くシャッフル処理
+        // シンプルに次の画面へ移動（エラーの原因になるシャッフルを全廃止）
         function goToGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
-            
-            const c1 = document.getElementById('card1');
-            const c2 = document.getElementById('card2');
-            const c3 = document.getElementById('card3');
-
-            // シャッフル中フラグをON（アニメーション中、タップの誤動作を防ぐ）
-            isShuffling = true;
-            document.getElementById('game-instruction').innerText = "天の川が激しくシャッフル中...";
-
-            // アニメーション用クラスを追加
-            c1.classList.add('shuffle-left');
-            c2.classList.add('shuffle-center');
-            c3.classList.add('shuffle-right');
-            
-            // 1.6秒後にシャッフルを完全停止
-            setTimeout(() => {
-                c1.classList.remove('shuffle-left');
-                c2.classList.remove('shuffle-center');
-                c3.classList.remove('shuffle-right');
-                document.getElementById('game-instruction').innerText = "好きな短冊を1枚選んでね";
-                isShuffling = false; // シャッフル終了、タップを許可
-            }, 1600);
         }
 
-        // 短冊をタップしたとき
+        // 短冊をタップしたとき（いつでも確実に動きます）
         function selectCard(cardNumber) {
-            if (isShuffling) return; // シャッフル中のタップは無視する
-
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('confirm-screen').classList.remove('hidden');
             const preview = document.getElementById('selected-card-preview');
