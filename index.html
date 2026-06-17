@@ -49,24 +49,25 @@
             padding: 8px 20px;
         }
 
-        /* ゲーム画面 */
+        /* 📊 ゲーム画面（情報バーの位置を調整） */
         #info-bar {
             position: absolute;
-            top: 10px;
+            top: 50px; /* ★上部から50px下に下げて、見えなくなるのを防ぎました */
             width: 90%;
             display: flex;
             justify-content: space-between;
             font-size: 18px;
             font-weight: bold;
-            background: rgba(255,255,255,0.1);
-            padding: 10px 20px;
+            background: rgba(255,255,255,0.15);
+            padding: 12px 20px;
             border-radius: 20px;
             z-index: 10;
+            backdrop-filter: blur(5px);
         }
         #game-area { position: relative; width: 100%; height: 100%; }
         #basket {
             position: absolute;
-            bottom: 40px;
+            bottom: 60px;
             left: 50%;
             transform: translateX(-50%);
             width: 80px;
@@ -74,9 +75,10 @@
             background: #8B4513;
             border-radius: 0 0 20px 20px;
             border: 4px solid #CD853F;
+            z-index: 8;
         }
         #basket::before { content: "🧺"; position: absolute; top: -25px; left: 22px; font-size: 24px; }
-        .item { position: absolute; font-size: 32px; will-change: transform; }
+        .item { position: absolute; font-size: 32px; will-change: transform; z-index: 7; }
         .bg-star { position: absolute; background: white; border-radius: 50%; animation: blink 2s infinite alternate; }
         @keyframes blink { from { opacity: 0.2; } to { opacity: 1; } }
 
@@ -91,33 +93,18 @@
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        /* インカメラの時は鏡のように反転（写り方を自然にするため） */
+        #video { width: 100%; height: 100%; object-fit: cover; }
         .mirror { transform: scaleX(-1); }
-        
         #frame-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             object-fit: contain;
-            pointer-events: none; /* 下のビデオや撮影ボタンを邪魔しない */
+            pointer-events: none;
             z-index: 5;
         }
         #preview-canvas { display: none; }
-        #taken-image {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover;
-            z-index: 4;
-        }
-        .camera-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
+        #taken-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 4; }
+        .camera-controls { display: flex; gap: 10px; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -179,7 +166,7 @@
     </div>
 
     <script>
-        // 背景の星生成（割愛）
+        // 背景の星生成
         const bg = document.getElementById('stars-bg');
         for(let i=0; i<40; i++) {
             let star = document.createElement('div'); star.className = 'bg-star';
@@ -190,12 +177,13 @@
 
         // --- ゲーム処理メンバ ---
         let score = 0; let timeLeft = 30; let gameActive = false;
-        let gameInterval, spawnInterval; let items = [];
+        let gameInterval, spawnInterval, animationFrameId; let items = [];
         const basket = document.getElementById('basket'); const gameArea = document.getElementById('game-area');
         let basketX = window.innerWidth / 2;
 
-        window.addEventListener('touchmove', (e) => { if (gameActive) moveBasket(e.touches[0].clientX); });
+        window.addEventListener('touchmove', (e) => { if (gameActive) moveBasket(e.touches[0].clientX); }, { passive: true });
         window.addEventListener('mousemove', (e) => { if (gameActive) moveBasket(e.clientX); });
+        
         function moveBasket(clientX) {
             const w = basket.offsetWidth; basketX = clientX;
             if (basketX < w/2) basketX = w/2; if (basketX > window.innerWidth - w/2) basketX = window.innerWidth - w/2;
@@ -207,12 +195,14 @@
             document.getElementById('game-screen').classList.remove('hidden');
             score = 0; timeLeft = 30; gameActive = true; items = [];
             document.getElementById('score-display').innerText = `スコア: ${score}`;
+            document.getElementById('timer-display').innerText = `残り時間: ${timeLeft}s`;
+            
             gameInterval = setInterval(() => {
                 timeLeft--; document.getElementById('timer-display').innerText = `残り時間: ${timeLeft}s`;
                 if (timeLeft <= 0) endGame();
             }, 1000);
             spawnInterval = setInterval(spawnItem, 600);
-            requestAnimationFrame(updateItems);
+            animationFrameId = requestAnimationFrame(updateItems);
         }
 
         function spawnItem() {
@@ -220,41 +210,84 @@
             const item = document.createElement('div'); item.className = 'item';
             const isStar = Math.random() > 0.25;
             item.innerText = isStar ? '★' : '◆'; item.dataset.type = isStar ? 'star' : 'cloud';
-            item.style.color = isStar ? '#FFD700' : '#555577'; item.style.top = '-40px';
+            item.style.color = isStar ? '#FFD700' : '#555577'; 
+            item.style.top = '0px';
             item.style.left = Math.random() * (window.innerWidth - 40) + 'px';
             gameArea.appendChild(item);
-            items.push({ element: item, y: -40, x: parseFloat(item.style.left), speed: Math.random() * 3 + 4 });
+            items.push({ element: item, y: 0, x: parseFloat(item.style.left), speed: Math.random() * 3 + 4 });
         }
 
+        // ★安全な当たり判定に修正しました
         function updateItems() {
             if (!gameActive) return;
+            
+            // カゴの位置情報を取得
             const basketRect = basket.getBoundingClientRect();
+
             for (let i = items.length - 1; i >= 0; i--) {
-                let item = items[i]; item.y += item.speed; item.element.style.transform = `translateY(${item.y}px)`;
+                let item = items[i];
+                if (!item || !item.element) { items.splice(i, 1); continue; }
+
+                item.y += item.speed;
+                item.element.style.top = item.y + 'px';
+
+                // 各アイテムの位置情報を取得
                 let itemRect = item.element.getBoundingClientRect();
-                if (itemRect.bottom >= basketRect.top && itemRect.top <= basketRect.bottom && itemRect.right >= basketRect.left && itemRect.left <= basketRect.right) {
-                    if (item.dataset.type === 'star') { score += 10; } else { score = Math.max(0, score - 20); }
+                
+                // 厳密かつエラーの出ない当たり判定処理
+                if (
+                    itemRect.bottom >= basketRect.top &&
+                    itemRect.top <= basketRect.bottom &&
+                    itemRect.right >= basketRect.left &&
+                    itemRect.left <= basketRect.right
+                ) {
+                    if (item.dataset.type === 'star') { 
+                        score += 10; 
+                    } else { 
+                        score = Math.max(0, score - 20); 
+                    }
                     document.getElementById('score-display').innerText = `スコア: ${score}`;
-                    item.element.remove(); items.splice(i, 1); continue;
+                    
+                    item.element.remove(); 
+                    items.splice(i, 1); 
+                    continue;
                 }
-                if (item.y > window.innerHeight) { item.element.remove(); items.splice(i, 1); }
+
+                // 画面外（下部）に出たら削除
+                if (item.y > window.innerHeight) { 
+                    item.element.remove(); 
+                    items.splice(i, 1); 
+                }
             }
-            requestAnimationFrame(updateItems);
+            if (gameActive) {
+                animationFrameId = requestAnimationFrame(updateItems);
+            }
         }
 
         function endGame() {
-            gameActive = false; clearInterval(gameInterval); clearInterval(spawnInterval);
-            items.forEach(item => item.element.remove());
+            gameActive = false; 
+            clearInterval(gameInterval); 
+            clearInterval(spawnInterval);
+            cancelAnimationFrame(animationFrameId);
+            
+            // 残った画面上のアイテムを安全に全削除
+            const allItems = document.querySelectorAll('.item');
+            allItems.forEach(el => el.remove());
+            items = [];
+
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
-            const title = document.getElementById('result-title'); const prizeZone = document.getElementById('prize-zone');
+            
+            const title = document.getElementById('result-title'); 
+            const prizeZone = document.getElementById('prize-zone');
+            
             if (score >= 100) {
                 title.innerText = "クリア！"; title.style.color = "#FFD700";
                 document.getElementById('result-text').innerText = `スコアは ${score} 点でした！`;
                 prizeZone.classList.remove('hidden');
             } else {
                 title.innerText = "ざんねん！"; title.style.color = "#FF4500";
-                document.getElementById('result-text').innerText = `スコアは ${score} 点でした。100点に届かなかったよ`;
+                document.getElementById('result-text').innerText = `スコアは ${score} 点でした。\n100点に届かなかったよ`;
                 prizeZone.classList.add('hidden');
             }
         }
@@ -264,63 +297,44 @@
             document.getElementById('start-screen').classList.remove('hidden');
         }
 
-        // --- 📷 ここからカメラ・フォトフレーム合成機能 ---
+        // --- 📷 カメラ・フォトフレーム合成機能 ---
         let currentStream = null;
-        let useFacingMode = "user"; // "user" = インカメ(自撮り), "environment" = 外カメ
+        let useFacingMode = "user"; 
 
-        // ※ ここに実際の透過フォトフレームのURLをセットしてください！
+        // ※実際の透過フォトフレームのURLをここにセットしてください
         const FRAME_IMAGE_SRC = "https://example.com/your-tanabata-frame.png"; 
-
-        // 初回ロード時にダミーではなく本番用画像に差し替え
         document.getElementById('frame-overlay').src = FRAME_IMAGE_SRC;
 
         async function openCamera() {
             document.getElementById('result-screen').classList.add('hidden');
             document.getElementById('camera-screen').classList.remove('hidden');
             document.getElementById('camera-instruction').innerText = "はい、チーズ！";
-            retakePhoto(); // 表示の初期化
+            retakePhoto();
             await initCamera();
         }
 
-        // カメラの起動
         async function initCamera() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
-
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
             const video = document.getElementById('video');
-            // インカメラの時は鏡像反転スタイルを適用
-            if(useFacingMode === "user") {
-                video.classList.add('mirror');
-            } else {
-                video.classList.remove('mirror');
-            }
-
-            const constraints = {
-                video: {
-                    facingMode: useFacingMode,
-                    width: { ideal: 1280 },
-                    height: { ideal: 960 }
-                },
-                audio: false
-            };
+            if(useFacingMode === "user") { video.classList.add('mirror'); } else { video.classList.remove('mirror'); }
 
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: useFacingMode, width: { ideal: 1280 }, height: { ideal: 960 } },
+                    audio: false
+                });
                 video.srcObject = currentStream;
             } catch (err) {
-                console.error("カメラの起動に失敗:", err);
-                alert("カメラの起動に失敗しました。ブラウザのカメラ権限を許可してください。");
+                console.error("カメラ起動失敗:", err);
+                alert("カメラの起動に失敗しました。ブラウザのカメラ使用を許可してください。");
             }
         }
 
-        // インカメ・外カメの切り替え
         async function switchCamera() {
             useFacingMode = (useFacingMode === "user") ? "environment" : "user";
             await initCamera();
         }
 
-        // 📸 撮影ボタンを押したとき
         function takePhoto() {
             const video = document.getElementById('video');
             const canvas = document.getElementById('preview-canvas');
@@ -328,40 +342,29 @@
             const frameImg = document.getElementById('frame-overlay');
             const takenImage = document.getElementById('taken-image');
 
-            // 写真の解像度を設定
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
-            // 1. カメラ映像をキャンバスに描画
             ctx.save();
             if (useFacingMode === "user") {
-                // 自撮り時は左右反転して保存する
                 ctx.translate(canvas.width, 0);
                 ctx.scale(-1, 1);
             }
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             ctx.restore();
 
-            // 2. フォトフレームを上に重ねて描画
-            // フレーム画像の比率を保ってキャンバスいっぱいに描画
             ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
 
-            // 3. データURLに変換してプレビュー表示
             const dataUrl = canvas.toDataURL('image/png');
             takenImage.src = dataUrl;
             takenImage.classList.remove('hidden');
 
-            // ダウンロードリンクの設定
-            const downloadLink = document.getElementById('download-link');
-            downloadLink.href = dataUrl;
-
-            // ボタン表示の切り替え
+            document.getElementById('download-link').href = dataUrl;
             document.getElementById('before-shoot').classList.add('hidden');
             document.getElementById('after-shoot').classList.remove('hidden');
             document.getElementById('camera-instruction').innerText = "きれいに撮れたかな？";
         }
 
-        // 🔄 撮り直しのとき
         function retakePhoto() {
             document.getElementById('taken-image').classList.add('hidden');
             document.getElementById('taken-image').src = "";
@@ -370,12 +373,8 @@
             document.getElementById('camera-instruction').innerText = "はい、チーズ！";
         }
 
-        // カメラ画面を閉じる
         function closeCamera() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
-            }
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
             document.getElementById('camera-screen').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
         }
