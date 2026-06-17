@@ -134,7 +134,7 @@
     <div id="start-screen">
         <h1 style="color: #FFD700; margin-bottom: 5px; font-size: 30px; text-shadow: 0 0 15px rgba(255,215,0,0.5);">七夕！天の川みくじ</h1>
         <p style="font-size: 14px; margin-bottom: 40px; color: #add8e6;">運を天にまかせて、限定フォトフレームをゲットしよう！</p>
-        <button class="btn" style="padding: 16px 45px; font-size: 20px;" onclick="goToGame()">みくじを引く</button>
+        <button class="btn" style="padding: 16px 45px; font-size: 20px;" onclick="goToGame()">おみくじを引く</button>
     </div>
 
     <div id="game-screen" class="hidden">
@@ -143,13 +143,13 @@
         
         <div id="card-container">
             <div class="tanzaku-card tanzaku-1" onclick="selectCard(1)">
-                <div class="tanzaku-text">願い事</div>
+                <div class="tanzaku-text">短冊①</div>
             </div>
             <div class="tanzaku-card tanzaku-2" onclick="selectCard(2)">
-                <div class="tanzaku-text">願い事</div>
+                <div class="tanzaku-text">短冊②</div>
             </div>
             <div class="tanzaku-card tanzaku-3" onclick="selectCard(3)">
-                <div class="tanzaku-text">願い事</div>
+                <div class="tanzaku-text">短冊③</div>
             </div>
         </div>
     </div>
@@ -159,7 +159,7 @@
         <p style="font-size: 15px; margin-bottom: 30px;">選んだ短冊から、天の川のパワーを感じるぞ！</p>
         
         <div id="selected-card-preview" class="tanzaku-card" style="pointer-events: none; margin-bottom: 25px;">
-            <div class="tanzaku-text">願い事</div>
+            <div class="tanzaku-text"></div>
         </div>
 
         <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color:#fff;" onclick="drawOmikuji()">🔮 結果をみる！</button>
@@ -193,6 +193,7 @@
 
         <div id="after-shoot" class="camera-controls hidden" style="margin-top: 10px;">
             <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color: #fff;" onclick="sharePhoto()">📤 写真を保存・共有</button>
+            
             <button class="btn" style="background: linear-gradient(45deg, #1F2954, #3a4b91); color: #FFD700; border: 1px solid #FFD700;" onclick="returnToTop()">🏠 タイトルへ戻る</button>
             
             <div class="controls-row" style="margin-top: 5px;">
@@ -226,12 +227,11 @@
             orihime: {
                 title: "織姫彦星吉 💞",
                 text: "すてきなハッピー！\nたいせつな人との願い事が叶うかもしれないね。",
-                // 📂 ご指定通り、拡張子を .png に変更しました！
                 frame: "tanabata_photoframe_2.png" 
             },
             sasanoha: {
                 title: "笹の葉吉 🎋",
-                text: "まったりラッキー！\n短冊に書いた願い事が、風にのって天まで届くよ。",
+                text: "まったりラッキー！\n短冊に書いた願い事が,風にのって天まで届くよ。",
                 frame: "https://placehold.jp/30/33cc33/ffffff/600x800.png?text=🎋Sasanoha_Frame🎋" 
             }
         };
@@ -241,11 +241,17 @@
             document.getElementById('game-screen').classList.remove('hidden');
         }
 
+        // 短冊を選んだ時の処理
         function selectCard(cardNumber) {
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('confirm-screen').classList.remove('hidden');
+            
             const preview = document.getElementById('selected-card-preview');
             preview.className = "tanzaku-card tanzaku-" + cardNumber;
+            
+            // 確認画面の短冊内のテキストも「短冊①」等に書き換える
+            const numMap = ["","①","②","③"];
+            preview.querySelector('.tanzaku-text').innerText = "短冊" + numMap[cardNumber];
         }
 
         function drawOmikuji() {
