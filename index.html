@@ -45,14 +45,15 @@
         .btn:active { transform: scale(0.95); }
         .btn-sub { background: #444; color: #fff; box-shadow: none; font-size: 14px; padding: 8px 20px; }
 
-        /* 短冊カードの配置 */
+        /* 短冊エリアの配置 */
         #card-container {
             display: flex;
             justify-content: center;
-            gap: 18px;
+            gap: 20px;
             margin-top: 35px;
             width: 100%;
-            height: 220px;
+            height: 240px;
+            position: relative; /* 位置移動アニメーションの基準に */
         }
         .tanzaku-card {
             width: 85px;
@@ -64,9 +65,8 @@
             position: relative;
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        .tanzaku-card:hover { transform: translateY(-5px); }
         
-        /* 短冊の色分け（グラデーションにして綺麗にしました） */
+        /* 短冊のグラデーション色分け */
         .tanzaku-1 { background: linear-gradient(to bottom, #FFF0F5, #FFB6C1); border-left: 6px solid #FF69B4; }
         .tanzaku-2 { background: linear-gradient(to bottom, #F0FFFF, #E0FFFF); border-left: 6px solid #00CED1; }
         .tanzaku-3 { background: linear-gradient(to bottom, #F0FFF0, #98FB98); border-left: 6px solid #32CD32; }
@@ -83,13 +83,23 @@
             letter-spacing: 8px;
         }
 
-        /* 🎬 シャッフル時のカタカタアニメーション */
-        .shuffle-anim {
-            animation: shake 0.4s ease-in-out infinite alternate;
+        /* 🌪️ ダイナミック・シャッフルアニメーション（激しく交差します） */
+        .shuffle-left { animation: moveLeft 0.4s ease-in-out 4 alternate; }
+        .shuffle-right { animation: moveRight 0.4s ease-in-out 4 alternate; }
+        .shuffle-center { animation: moveCenter 0.2s ease-in-out 8 alternate; }
+
+        @keyframes moveLeft {
+            0% { transform: translateX(0) scale(1); z-index: 1; }
+            100% { transform: translateX(105px) scale(1.1); z-index: 10; } /* 右側へ飛び出す */
         }
-        @keyframes shake {
-            0% { transform: translateY(0) rotate(0deg); }
-            100% { transform: translateY(-10px) rotate(2deg); }
+        @keyframes moveRight {
+            0% { transform: translateX(0) scale(1); z-index: 1; }
+            100% { transform: translateX(-105px) scale(0.9); z-index: -1; } /* 左側へ潜り込む */
+        }
+        @keyframes moveCenter {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(0.9) rotate(-5deg); }
         }
 
         /* 🎉 お祝いの星くずエフェクト */
@@ -185,7 +195,7 @@
         
         <div id="camera-container">
             <video id="video" autoplay playsinline></video>
-            <img id="frame-overlay" src="" alt="Frame">
+            <img id="frame-overlay" src="" alt="Frame" crossorigin="anonymous">
             <img id="taken-image" class="hidden">
         </div>
 
@@ -215,55 +225,59 @@
             bg.appendChild(star);
         }
 
-        // --- ⚙️ おみくじとフォトフレームの設定 ---
+        // --- ⚙️ おみくじとフォトフレームの設定（テスト用URLに差し替え済み） ---
         let selectedFrame = ""; 
 
         const omikujiResults = {
             amanogawa: {
                 title: "天の川吉 ✨",
                 text: "最高のラッキー！\n満天の星空があなたに幸運を届けてくれるよ。",
-                frame: "https://example.com/frame-amanogawa.png" 
+                frame: "https://placehold.jp/30/ffcc00/ffffff/600x800.png?text=✨Amanogawa_Frame✨" 
             },
             orihime: {
                 title: "織姫彦星吉 💞",
                 text: "すてきなハッピー！\nたいせつな人との願い事が叶うかもしれないね。",
-                frame: "https://example.com/frame-orihime.png" 
+                frame: "https://placehold.jp/30/ff66cc/ffffff/600x800.png?text=💞Orihime_Frame💞" 
             },
             sasanoha: {
                 title: "笹の葉吉 🎋",
                 text: "まったりラッキー！\n短冊に書いた願い事が、風にのって天まで届くよ。",
-                frame: "https://example.com/frame-sasanoha.png" 
+                frame: "https://placehold.jp/30/33cc33/ffffff/600x800.png?text=🎋Sasanoha_Frame🎋" 
             }
         };
 
-        // スタートからゲーム画面に移る際、シャッフル演出を挟む
+        // 🌪️ 進化したダイナミックシャッフル演出
         function goToGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
             
-            // カタカタ揺れるアニメーションを付与
-            const cards = [document.getElementById('card1'), document.getElementById('card2'), document.getElementById('card3')];
-            cards.forEach(c => c.classList.add('shuffle-anim'));
-            document.getElementById('game-instruction').innerText = "天の川が短冊をシャッフル中...";
+            const c1 = document.getElementById('card1');
+            const c2 = document.getElementById('card2');
+            const c3 = document.getElementById('card3');
             
-            // 1.2秒後にシャッフルが止まり、選べるようになる
+            // それぞれ異なる動きを割り当てて交差させる
+            c1.classList.add('shuffle-left');
+            c2.classList.add('shuffle-center');
+            c3.classList.add('shuffle-right');
+            
+            document.getElementById('game-instruction').innerText = "天の川が激しくシャッフル中...";
+            
+            // 1.6秒間激しく入れ替わったのちにストップ
             setTimeout(() => {
-                cards.forEach(c => c.classList.remove('shuffle-anim'));
+                c1.classList.remove('shuffle-left');
+                c2.classList.remove('shuffle-center');
+                c3.classList.remove('shuffle-right');
                 document.getElementById('game-instruction').innerText = "好きな短冊を1枚選んでね";
-            }, 1200);
+            }, 1600);
         }
 
-        // 短冊を選んだ時の処理（確認画面へ）
         function selectCard(cardNumber) {
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('confirm-screen').classList.remove('hidden');
-            
-            // 確認画面のダミー短冊の色を、選んだものに合わせる
             const preview = document.getElementById('selected-card-preview');
             preview.className = "tanzaku-card tanzaku-" + cardNumber;
         }
 
-        // おみくじを確定で引く処理（各33.3%の完全均等）
         function drawOmikuji() {
             document.getElementById('confirm-screen').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
@@ -283,7 +297,6 @@
             selectedFrame = result.frame;
             document.getElementById('frame-overlay').src = selectedFrame;
 
-            // 「天の川吉」の時だけ星屑を降らせるエフェクト
             if (resultKey === 'amanogawa') {
                 for (let i = 0; i < 25; i++) {
                     setTimeout(spawnCelebrateStar, i * 40);
@@ -291,7 +304,6 @@
             }
         }
 
-        // 星くずエフェクト生成
         function spawnCelebrateStar() {
             const star = document.createElement('div');
             star.className = 'celebrate-star';
@@ -307,7 +319,7 @@
             document.getElementById('start-screen').classList.remove('hidden');
         }
 
-        // --- 📷 カメラ機能 ---
+        // --- 📷 カメラ機能（バグ防止クロスオリジン属性追加） ---
         let currentStream = null;
         let useFacingMode = "user"; 
 
@@ -358,16 +370,21 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             ctx.restore();
 
-            ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+            // 外部画像をCanvasに書き込む際のセキュリティエラー対策を考慮して描画
+            try {
+                ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/png');
+                takenImage.src = dataUrl;
+                takenImage.classList.remove('hidden');
 
-            const dataUrl = canvas.toDataURL('image/png');
-            takenImage.src = dataUrl;
-            takenImage.classList.remove('hidden');
-
-            document.getElementById('download-link').href = dataUrl;
-            document.getElementById('before-shoot').classList.add('hidden');
-            document.getElementById('after-shoot').classList.remove('hidden');
-            document.getElementById('camera-instruction').innerText = "きれいに撮れたかな？";
+                document.getElementById('download-link').href = dataUrl;
+                document.getElementById('before-shoot').classList.add('hidden');
+                document.getElementById('after-shoot').classList.remove('hidden');
+                document.getElementById('camera-instruction').innerText = "きれいに撮れたかな？";
+            } catch(e) {
+                console.error("画像合成エラー:", e);
+                alert("画像の合成に失敗しました。本番用フレーム画像を設定すると解決する場合があります。");
+            }
         }
 
         function retakePhoto() {
