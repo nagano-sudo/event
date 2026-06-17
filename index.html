@@ -64,7 +64,7 @@
             cursor: pointer;
             position: relative;
             transition: transform 0.2s, box-shadow 0.2s;
-            will-change: transform; /* ブラウザの描画を滑らかにする魔法のプロパティ */
+            will-change: transform;
         }
         
         /* 短冊のグラデーション色分け */
@@ -148,11 +148,270 @@
 
     <div id="stars-bg"></div>
 
+    <!-- 1. スタート画面 -->
     <div id="start-screen">
         <h1 style="color: #FFD700; margin-bottom: 5px; font-size: 30px; text-shadow: 0 0 15px rgba(255,215,0,0.5);">七夕！天の川みくじ</h1>
         <p style="font-size: 14px; margin-bottom: 40px; color: #add8e6;">運を天にまかせて、限定フォトフレームをゲットしよう！</p>
         <button class="btn" style="padding: 16px 45px; font-size: 20px;" onclick="goToGame()">みくじを引く</button>
     </div>
 
+    <!-- 2. ゲーム画面 -->
     <div id="game-screen" class="hidden">
-        <h2 id="game-instruction" style="color: #FFD700; font-size: 22px;">好きな短冊を1枚
+        <h2 id="game-instruction" style="color: #FFD700; font-size: 22px;">好きな短冊を1枚選んでね</h2>
+        <p id="game-subtext" style="font-size: 13px; margin-top: 5px; color: #ccc;">どれをえらんでもカメラが起動するよ</p>
+        
+        <div id="card-container">
+            <div id="card1" class="tanzaku-card tanzaku-1" onclick="selectCard(1)">
+                <div class="tanzaku-text">願い事</div>
+            </div>
+            <div id="card2" class="tanzaku-card tanzaku-2" onclick="selectCard(2)">
+                <div class="tanzaku-text">願い事</div>
+            </div>
+            <div id="card3" class="tanzaku-card tanzaku-3" onclick="selectCard(3)">
+                <div class="tanzaku-text">願い事</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. ドキドキ確認画面 -->
+    <div id="confirm-screen" class="hidden">
+        <h2 style="color: #FFD700; font-size: 24px; margin-bottom: 15px;">魂を込めて……</h2>
+        <p style="font-size: 15px; margin-bottom: 30px;">選んだ短冊から、天の川のパワーを感じるぞ！</p>
+        
+        <div id="selected-card-preview" class="tanzaku-card" style="pointer-events: none; margin-bottom: 25px;">
+            <div class="tanzaku-text">願い事</div>
+        </div>
+
+        <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color:#fff;" onclick="drawOmikuji()">🔮 結果をみる！</button>
+    </div>
+
+    <!-- 4. 結果画面 -->
+    <div id="result-screen" class="hidden">
+        <p style="font-size: 16px; color: #add8e6; margin-bottom: 5px;">あなたの運勢は…</p>
+        <h2 id="result-title" style="font-size: 42px; margin-bottom: 15px; text-shadow: 0 0 15px #FFD700;"></h2>
+        <p id="result-text" style="font-size: 16px; margin-bottom: 35px; white-space: pre-line; line-height: 1.6;"></p>
+        
+        <button class="btn" onclick="openCamera()">このフレームでカメラを起動</button>
+        <button class="btn btn-sub" onclick="resetGame()" style="margin-top: 25px;">タイトルへ戻る</button>
+    </div>
+
+    <!-- 5. 📷 カメラ・撮影画面 -->
+    <div id="camera-screen" class="hidden">
+        <h2 style="color: #FFD700; font-size: 18px; margin-bottom: 10px;" id="camera-instruction">はい、チーズ！</h2>
+        
+        <div id="camera-container">
+            <video id="video" autoplay playsinline></video>
+            <img id="frame-overlay" src="" alt="Frame" crossorigin="anonymous">
+            <img id="taken-image" class="hidden">
+        </div>
+
+        <div id="before-shoot" class="camera-controls">
+            <button class="btn btn-sub" onclick="switchCamera()">🔄 カメラ切替</button>
+            <button class="btn" onclick="takePhoto()">📸 パシャリ！</button>
+        </div>
+
+        <div id="after-shoot" class="camera-controls hidden">
+            <button class="btn btn-sub" onclick="retakePhoto()">🔄 撮り直し</button>
+            <a id="download-link" download="tanabata_photo.png">
+                <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color: #fff;">💾 保存する</button>
+            </a>
+        </div>
+        
+        <button class="btn btn-sub" onclick="closeCamera()" style="margin-top: 25px;">戻る</button>
+        <canvas id="preview-canvas"></canvas>
+    </div>
+
+    <script>
+        // 背景の星生成
+        const bg = document.getElementById('stars-bg');
+        for(let i=0; i<40; i++) {
+            let star = document.createElement('div'); star.className = 'bg-star';
+            star.style.width = star.style.height = Math.random() * 3 + 'px';
+            star.style.top = Math.random() * 100 + 'vh'; star.style.left = Math.random() * 100 + 'vw';
+            bg.appendChild(star);
+        }
+
+        // --- ⚙️ おみくじとフォトフレームの設定 ---
+        let selectedFrame = ""; 
+        let isShuffling = false; // シャッフル中の誤タップを防ぐフラグ
+
+        const omikujiResults = {
+            amanogawa: {
+                title: "天の川吉 ✨",
+                text: "最高のラッキー！\n満天 of 星空があなたに幸運を届けてくれるよ。",
+                frame: "https://placehold.jp/30/ffcc00/ffffff/600x800.png?text=✨Amanogawa_Frame✨" 
+            },
+            orihime: {
+                title: "織姫彦星吉 💞",
+                text: "すてきなハッピー！\nたいせつな人との願い事が叶うかもしれないね。",
+                frame: "https://placehold.jp/30/ff66cc/ffffff/600x800.png?text=💞Orihime_Frame💞" 
+            },
+            sasanoha: {
+                title: "笹の葉吉 🎋",
+                text: "まったりラッキー！\n短冊に書いた願い事が、風にのって天まで届くよ。",
+                frame: "https://placehold.jp/30/33cc33/ffffff/600x800.png?text=🎋Sasanoha_Frame🎋" 
+            }
+        };
+
+        // 🌟 確実に入れ替わり、タップも100%効くシャッフル処理
+        function goToGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            const c1 = document.getElementById('card1');
+            const c2 = document.getElementById('card2');
+            const c3 = document.getElementById('card3');
+
+            // シャッフル中フラグをON（アニメーション中、タップの誤動作を防ぐ）
+            isShuffling = true;
+            document.getElementById('game-instruction').innerText = "天の川が激しくシャッフル中...";
+
+            // アニメーション用クラスを追加
+            c1.classList.add('shuffle-left');
+            c2.classList.add('shuffle-center');
+            c3.classList.add('shuffle-right');
+            
+            // 1.6秒後にシャッフルを完全停止
+            setTimeout(() => {
+                c1.classList.remove('shuffle-left');
+                c2.classList.remove('shuffle-center');
+                c3.classList.remove('shuffle-right');
+                document.getElementById('game-instruction').innerText = "好きな短冊を1枚選んでね";
+                isShuffling = false; // シャッフル終了、タップを許可
+            }, 1600);
+        }
+
+        // 短冊をタップしたとき
+        function selectCard(cardNumber) {
+            if (isShuffling) return; // シャッフル中のタップは無視する
+
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('confirm-screen').classList.remove('hidden');
+            const preview = document.getElementById('selected-card-preview');
+            preview.className = "tanzaku-card tanzaku-" + cardNumber;
+        }
+
+        function drawOmikuji() {
+            document.getElementById('confirm-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            let resultKey = "sasanoha";
+            const rand = Math.random();
+
+            if (rand < 0.333) resultKey = "amanogawa";
+            else if (rand < 0.666) resultKey = "orihime";
+            else resultKey = "sasanoha";
+
+            const result = omikujiResults[resultKey];
+            
+            document.getElementById('result-title').innerText = result.title;
+            document.getElementById('result-text').innerText = result.text;
+            
+            selectedFrame = result.frame;
+            document.getElementById('frame-overlay').src = selectedFrame;
+
+            if (resultKey === 'amanogawa') {
+                for (let i = 0; i < 25; i++) {
+                    setTimeout(spawnCelebrateStar, i * 40);
+                }
+            }
+        }
+
+        function spawnCelebrateStar() {
+            const star = document.createElement('div');
+            star.className = 'celebrate-star';
+            star.innerText = ['✨','⭐','🌟'][Math.floor(Math.random() * 3)];
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.fontSize = (Math.random() * 20 + 20) + 'px';
+            document.body.appendChild(star);
+            setTimeout(() => star.remove(), 1500);
+        }
+
+        function resetGame() {
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        }
+
+        // --- 📷 カメラ機能 ---
+        let currentStream = null;
+        let useFacingMode = "user"; 
+
+        async function openCamera() {
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('camera-screen').classList.remove('hidden');
+            retakePhoto();
+            await initCamera();
+        }
+
+        async function initCamera() {
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
+            const video = document.getElementById('video');
+            if(useFacingMode === "user") { video.classList.add('mirror'); } else { video.classList.remove('mirror'); }
+
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: useFacingMode, width: { ideal: 1280 }, height: { ideal: 960 } },
+                    audio: false
+                });
+                video.srcObject = currentStream;
+            } catch (err) {
+                console.error("カメラ起動失敗:", err);
+                alert("カメラの起動に失敗しました。カメラ使用を許可してください。");
+            }
+        }
+
+        async function switchCamera() {
+            useFacingMode = (useFacingMode === "user") ? "environment" : "user";
+            await initCamera();
+        }
+
+        function takePhoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('preview-canvas');
+            const ctx = canvas.getContext('2d');
+            const frameImg = document.getElementById('frame-overlay');
+            const takenImage = document.getElementById('taken-image');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            ctx.save();
+            if (useFacingMode === "user") {
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+            }
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            try {
+                ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/png');
+                takenImage.src = dataUrl;
+                takenImage.classList.remove('hidden');
+
+                document.getElementById('download-link').href = dataUrl;
+                document.getElementById('before-shoot').classList.add('hidden');
+                document.getElementById('after-shoot').classList.remove('hidden');
+                document.getElementById('camera-instruction').innerText = "きれいに撮れたかな？";
+            } catch(e) {
+                console.error("画像合成エラー:", e);
+                alert("画像の合成に失敗しました。本番用フレーム画像を設定すると解決する場合があります。");
+            }
+        }
+
+        function retakePhoto() {
+            document.getElementById('taken-image').classList.add('hidden');
+            document.getElementById('taken-image').src = "";
+            document.getElementById('before-shoot').classList.remove('hidden');
+            document.getElementById('after-shoot').classList.add('hidden');
+            document.getElementById('camera-instruction').innerText = "はい、チーズ！";
+        }
+
+        function closeCamera() {
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
+            document.getElementById('camera-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
