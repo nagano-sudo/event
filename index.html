@@ -218,11 +218,12 @@
         let selectedFrame = ""; 
         let currentBlob = null; 
 
+        // 🌟 3つの画像ファイル名がすべて反映されています
         const omikujiResults = {
             amanogawa: {
                 title: "天の川吉 ✨",
                 text: "最高のラッキー！\n満天の星空があなたに幸運を届けてくれるよ。",
-                frame: "https://placehold.jp/30/ffcc00/ffffff/600x800.png?text=✨Amanogawa_Frame✨" 
+                frame: "tanabata_photoframe_1.png" 
             },
             orihime: {
                 title: "織姫彦星吉 💞",
@@ -231,8 +232,8 @@
             },
             sasanoha: {
                 title: "笹の葉吉 🎋",
-                text: "まったりラッキー！\n短冊に書いた願い事が,風にのって天まで届くよ。",
-                frame: "https://placehold.jp/30/33cc33/ffffff/600x800.png?text=🎋Sasanoha_Frame🎋" 
+                text: "まったりラッキー！\n短冊に書いた願い事が、風にのって天まで届くよ。",
+                frame: "tanabata_photoframe_3.png" 
             }
         };
 
@@ -241,7 +242,6 @@
             document.getElementById('game-screen').classList.remove('hidden');
         }
 
-        // 短冊を選んだ時の処理
         function selectCard(cardNumber) {
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('confirm-screen').classList.remove('hidden');
@@ -249,7 +249,6 @@
             const preview = document.getElementById('selected-card-preview');
             preview.className = "tanzaku-card tanzaku-" + cardNumber;
             
-            // 確認画面の短冊内のテキストも「短冊①」等に書き換える
             const numMap = ["","①","②","③"];
             preview.querySelector('.tanzaku-text').innerText = "短冊" + numMap[cardNumber];
         }
