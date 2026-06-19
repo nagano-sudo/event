@@ -37,7 +37,7 @@
             font-size: 18px;
             font-weight: bold;
             border-radius: 30px;
-            margin-top: 15px;
+            margin-top: 12px;
             box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
             cursor: pointer;
             transition: transform 0.1s;
@@ -120,8 +120,22 @@
         #preview-canvas { display: none; }
         #taken-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 4; }
         
-        .camera-controls { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 5px; }
-        .controls-row { display: flex; gap: 10px; justify-content: center; width: 100%; margin-top: 5px; }
+        /* 📱 Safariの底付きメニューバー対策 */
+        .camera-controls { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            width: 100%; 
+            gap: 2px; 
+            margin-top: 5px;
+        }
+        .controls-row { 
+            display: flex; 
+            gap: 10px; 
+            justify-content: center; 
+            width: 100%; 
+            margin-top: 2px; 
+        }
 
         .bg-star { position: absolute; background: white; border-radius: 50%; animation: blink 2s infinite alternate; }
         @keyframes blink { from { opacity: 0.2; } to { opacity: 1; } }
@@ -183,22 +197,20 @@
             <img id="taken-image" class="hidden">
         </div>
 
-        <div id="before-shoot" class="camera-controls" style="margin-top: 15px;">
+        <div id="before-shoot" class="camera-controls" style="margin-top: 10px;">
             <div class="controls-row">
                 <button class="btn btn-sub" onclick="switchCamera()">🔄 カメラ切替</button>
                 <button class="btn" style="width: 160px; margin-top: 0;" onclick="takePhoto()">📸 パシャリ！</button>
             </div>
-            <button class="btn btn-sub" onclick="closeCamera()" style="margin-top: 10px;">戻る</button>
+            <button class="btn btn-sub" onclick="closeCamera()" style="margin-top: 8px;">戻る</button>
         </div>
 
-        <div id="after-shoot" class="camera-controls hidden" style="margin-top: 10px;">
-            <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color: #fff;" onclick="sharePhoto()">📤 写真を保存・共有</button>
+        <div id="after-shoot" class="camera-controls hidden" style="margin-top: 5px;">
+            <button class="btn" style="background: linear-gradient(45deg, #00FF7F, #00CE66); color: #fff; margin-top: 5px;" onclick="sharePhoto()">📤 写真を保存・共有</button>
             
-            <button class="btn" style="background: linear-gradient(45deg, #1F2954, #3a4b91); color: #FFD700; border: 1px solid #FFD700;" onclick="returnToTop()">🏠 タイトルへ戻る</button>
+            <button class="btn" style="background: linear-gradient(45deg, #1F2954, #3a4b91); color: #FFD700; border: 1px solid #FFD700; margin-top: 5px;" onclick="returnToTop()">🏠 タイトルへ戻る</button>
             
-            <div class="controls-row" style="margin-top: 5px;">
-                <button class="btn btn-sub" onclick="retakePhoto()">🔄 もう一度撮る（撮り直し）</button>
-            </div>
+            <button class="btn btn-sub" style="margin-top: 8px; background: #555;" onclick="retakePhoto()">🔄 もう一度撮る（撮り直し）</button>
         </div>
         
         <canvas id="preview-canvas"></canvas>
@@ -218,7 +230,6 @@
         let selectedFrame = ""; 
         let currentBlob = null; 
 
-        // 🌟 3つの画像ファイル名がすべて反映されています
         const omikujiResults = {
             amanogawa: {
                 title: "天の川吉 ✨",
@@ -233,7 +244,7 @@
             sasanoha: {
                 title: "笹の葉吉 🎋",
                 text: "まったりラッキー！\n短冊に書いた願い事が、風にのって天まで届くよ。",
-                frame: "tanabata_photoframe_3.png" 
+                frame: "https://placehold.jp/30/33cc33/ffffff/600x800.png?text=🎋Sasanoha_Frame🎋" 
             }
         };
 
